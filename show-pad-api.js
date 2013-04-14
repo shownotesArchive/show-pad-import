@@ -9,17 +9,27 @@ exports.init = function (_host, _port, _apikey)
   apikey = _apikey;
 }
 
-exports.post = function (endpoint, body, cb)
+exports.create = function (endpoint, body, cb)
 {
-  var reqUrl = "/api/1/" + endpoint + "?apikey=" + apikey;
+  request("POST", endpoint, body, null, cb);
+}
+
+exports.update = function (endpoint, body, entity, cb)
+{
+  request("PUT",  endpoint, body, entity, cb);
+}
+
+function request(method, endpoint, body, entity, cb)
+{
+  var reqUrl = "/api/1/" + endpoint + (entity ? ("/" + entity) : "") + "?apikey=" + apikey;
   var options =
     {
       hostname: host,
       port: port,
       path: reqUrl,
-      method: 'POST',
+      method: method,
       headers: {
-        'content-type': 'application/json'
+        'content-type': (body instanceof Object) ? 'application/json' : 'text/plain'
       }
     };
 
@@ -35,7 +45,6 @@ exports.post = function (endpoint, body, cb)
 
       res.on('end', function()
       {
-        console.log(body);
         if(res.statusCode == 200)
         {
           cb(null, JSON.parse(body).data);
@@ -48,7 +57,9 @@ exports.post = function (endpoint, body, cb)
     }
   );
 
-  console.log(body)
-  req.write(JSON.stringify(body));
+  if(body instanceof Object)
+    body = JSON.stringify(body);
+
+  req.write(body);
   req.end();
 }

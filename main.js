@@ -99,18 +99,47 @@ function prepareText(fields)
 
 function importDocs(cb)
 {
-  showpadapi.post('groups', { name: group, short: group, type: "open" },
-    function ()
-    {
-      async.each(documents,
-        function (doc, cb)
-        {
-          console.log("Importing %s (%s..)", doc.docname, doc.text.substr(0, 35).replace(/\n/g, ""));
+  async.series(
+    [
+      // create group
+      function (cb)
+      {
+        showpadapi.create('groups', { name: group, short: group, type: "open" },
+          function ()
+          {
+            cb();
+          }
+        );
+      },
+      // create docs
+      function (cb)
+      {
+        async.each(documents,
+          function (doc, cb)
+          {
+            console.log("Importing %s (%s..)", doc.docname, doc.text.substr(0, 35).replace(/\n/g, ""));
 
-          showpadapi.post('docs', { docname: doc.docname, type: type, group: group }, cb);
-        },
-        cb
-      );
-    }
+            async.series(
+              [
+                // create doc
+                function (cb)
+                {
+                  showpadapi.create('docs', { docname: doc.docname, type: type, group: group }, cb);
+                },
+                // set text
+                function (cb)
+                {
+                  showpadapi.update('doctexts', doc.text, doc.docname, cb);
+                }
+              ],
+              cb
+            );
+          },
+          cb
+        );
+      }
+    ],
+
+    function () { console.log(arguments) }
   );
 }
